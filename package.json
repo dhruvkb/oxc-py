@@ -1,0 +1,8 @@
+{
+	"$schema": "https://json.schemastore.org/package.json",
+	"private": true,
+	"devDependencies": {
+		"@j178/prek": "^0.4.8",
+		"oxfmt": "^0.58.0"
+	}
+}
