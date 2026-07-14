@@ -25,8 +25,11 @@ TARGETS: dict[str, list[str]] = {
 }
 
 SUMMARIES = {
-	"oxlint": "The oxc linter, oxlint, distributed as a PyPI package.",
-	"oxfmt": "The oxc formatter, oxfmt, distributed as a PyPI package.",
+	"oxlint": (
+		"Oxlint is a high-performance linter for JavaScript and TypeScript built on the"
+		"Oxc compiler stack."
+	),
+	"oxfmt": "Oxfmt is a high-performance formatter for the JavaScript ecosystem.",
 }
 
 
@@ -121,6 +124,12 @@ def build(tool: str, version: str, target: str, release_tag: str, outdir: Path) 
 		[sys.executable, "-m", "wheel", "pack", str(work), "--dest-dir", str(dist)],
 		check=True,
 	)
+	# PITFALL: this globs the whole dist/ dir, so with multiple targets built
+	# into one dir (e.g. a local loop over all targets) it returns the wrong
+	# filename — the lexicographically last wheel, not the one just packed.
+	# Harmless in CI (one wheel per matrix job), wrong locally. If you build
+	# many targets at once, capture `wheel pack`'s "Repacking wheel as ..." line
+	# instead of relying on this return value.
 	return sorted(dist.glob(f"{tool}-{version}-*.whl"))[-1]
 
 
