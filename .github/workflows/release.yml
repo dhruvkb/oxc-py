@@ -17,12 +17,12 @@ jobs:
       release_tag: ${{ steps.detect.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - run: pip install -r requirements-dev.txt
+          python-version: "3.14"
+      - run: uv sync
       - id: detect
-        run: python scripts/check_versions.py
+        run: uv run scripts/check_versions.py
 
   build:
     needs: check
@@ -42,25 +42,25 @@ jobs:
           - x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - run: pip install -r requirements-dev.txt
+          python-version: "3.14"
+      - run: uv sync
       - name: Build wheel
         run: |
-          python scripts/build_wheel.py \
+          uv run scripts/build_wheel.py \
             --tool "${{ matrix.tool }}" \
             --version "${{ fromJson(needs.check.outputs.versions)[matrix.tool] }}" \
             --target "${{ matrix.target }}" \
             --release-tag "${{ needs.check.outputs.release_tag }}" \
             --outdir build
       - name: Check wheel metadata
-        run: twine check build/dist/*.whl
+        run: uv run twine check build/dist/*.whl
       - name: Smoke-test native wheel
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          python -m venv /tmp/smoke
-          /tmp/smoke/bin/pip install build/dist/*.whl
+          uv venv /tmp/smoke
+          uv pip install --python /tmp/smoke/bin/python build/dist/*.whl
           got="$(/tmp/smoke/bin/${{ matrix.tool }} --version)"
           echo "$got"
           echo "$got" | grep -qF "${{ fromJson(needs.check.outputs.versions)[matrix.tool] }}"
