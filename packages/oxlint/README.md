@@ -1,4 +1,4 @@
-# oxlint
+# <img src="https://github.com/dhruvkb/oxc-py/raw/main/readme_assets/logo.png" alt="" align="left" width="40" height="40"> oxlint
 
 [Oxlint](https://oxc.rs/docs/guide/usage/linter) (`/oʊ-ɛks-lɪnt/`) is a high-performance linter for
 JavaScript and TypeScript built on the Oxc compiler stack.
