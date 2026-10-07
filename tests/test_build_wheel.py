@@ -36,7 +36,7 @@ def test_binary_name_adds_exe_on_windows():
 
 
 def test_download_url():
-	assert download_url("apps_v1.72.0", "oxlint-x86_64-apple-darwin.tar.gz") == (
+	assert download_url("oxlint_v1.87.0", "oxlint-x86_64-apple-darwin.tar.gz") == (
 		"https://github.com/oxc-project/oxc/releases/download/"
-		"apps_v1.72.0/oxlint-x86_64-apple-darwin.tar.gz"
+		"oxlint_v1.87.0/oxlint-x86_64-apple-darwin.tar.gz"
 	)

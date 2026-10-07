@@ -14,7 +14,7 @@ jobs:
     outputs:
       tools: ${{ steps.detect.outputs.tools }}
       versions: ${{ steps.detect.outputs.versions }}
-      release_tag: ${{ steps.detect.outputs.release_tag }}
+      release_tags: ${{ steps.detect.outputs.release_tags }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -22,6 +22,8 @@ jobs:
           python-version: "3.14"
       - run: uv sync
       - id: detect
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run scripts/check_versions.py
 
   build:
@@ -52,7 +54,7 @@ jobs:
             --tool "${{ matrix.tool }}" \
             --version "${{ fromJson(needs.check.outputs.versions)[matrix.tool] }}" \
             --target "${{ matrix.target }}" \
-            --release-tag "${{ needs.check.outputs.release_tag }}" \
+            --release-tag "${{ fromJson(needs.check.outputs.release_tags)[matrix.tool] }}" \
             --outdir build
       - name: Check wheel metadata
         run: uv run twine check build/dist/*.whl
