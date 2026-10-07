@@ -13,8 +13,9 @@ each one in a platform-tagged wheel, and publishes it to PyPI.
 
 ## How it works
 
-- `scripts/check_versions.py` — finds the latest oxc `apps_*` release, parses the per-tool versions
-  from the release title, and compares them against the versions currently on PyPI.
+- `scripts/check_versions.py` — finds the latest `oxlint_v*` and `oxfmt_v*` releases, parses the
+  per-tool versions from the release titles, and compares them against the versions currently on
+  PyPI.
 - `scripts/build_wheel.py` — downloads one tool's binary for one target and assembles a wheel with
   the binary placed directly on `PATH`.
 - `.github/workflows/release.yml` — runs daily (and on demand), fans out a `{tool} × {platform}`

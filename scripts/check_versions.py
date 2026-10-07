@@ -19,7 +19,11 @@ PYPI_URL = "https://pypi.org/pypi/{project}/json"
 
 
 def _get_json(url: str) -> Any:
-	req = urllib.request.Request(url, headers={"User-Agent": "oxc-py"})
+	headers = {"User-Agent": "oxc-py"}
+	token = os.environ.get("GITHUB_TOKEN")
+	if token and url.startswith("https://api.github.com/"):
+		headers["Authorization"] = f"Bearer {token}"
+	req = urllib.request.Request(url, headers=headers)
 	with urllib.request.urlopen(req) as resp:
 		return json.load(resp)
 
@@ -27,7 +31,7 @@ def _get_json(url: str) -> Any:
 def parse_versions(title: str) -> dict[str, str]:
 	"""Extract per-tool versions from a release title.
 
-	Titles look like ``oxlint v1.72.0 & oxfmt v0.57.0``.
+	Titles look like ``oxlint v1.87.0`` or ``oxfmt v0.72.0``.
 	"""
 	out: dict[str, str] = {}
 	for tool in TOOLS:
@@ -37,12 +41,12 @@ def parse_versions(title: str) -> dict[str, str]:
 	return out
 
 
-def latest_apps_release() -> dict:
+def latest_release(tool: str) -> dict:
 	releases = _get_json(RELEASES_URL)
 	for rel in releases:
-		if rel.get("tag_name", "").startswith("apps_"):
+		if rel.get("tag_name", "").startswith(f"{tool}_v"):
 			return rel
-	raise RuntimeError("no apps_* release found in latest 30 releases")
+	raise RuntimeError(f"no {tool}_v* release found in latest 30 releases")
 
 
 def pypi_version(project: str) -> str | None:
@@ -62,15 +66,20 @@ def needs_publish(current: str | None, candidate: str) -> bool:
 
 
 def main() -> None:
-	release = latest_apps_release()
-	versions = parse_versions(release["name"])
+	releases = {tool: latest_release(tool) for tool in TOOLS}
+	versions = {
+		tool: parse_versions(release["name"])[tool]
+		for tool, release in releases.items()
+	}
 	tools_to_build: list[str] = []
 	for tool, version in versions.items():
 		if needs_publish(pypi_version(tool), version):
 			tools_to_build.append(tool)
 
 	outputs = {
-		"release_tag": release["tag_name"],
+		"release_tags": json.dumps(
+			{tool: release["tag_name"] for tool, release in releases.items()}
+		),
 		"tools": json.dumps(tools_to_build),
 		"versions": json.dumps(versions),
 	}

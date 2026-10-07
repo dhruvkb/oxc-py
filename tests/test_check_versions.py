@@ -1,9 +1,9 @@
 from scripts.check_versions import needs_publish, parse_versions
 
 
-def test_parse_versions_extracts_both_tools():
-	title = "oxlint v1.72.0 & oxfmt v0.57.0"
-	assert parse_versions(title) == {"oxlint": "1.72.0", "oxfmt": "0.57.0"}
+def test_parse_versions_extracts_each_tool():
+	assert parse_versions("oxlint v1.87.0") == {"oxlint": "1.87.0"}
+	assert parse_versions("oxfmt v0.72.0") == {"oxfmt": "0.72.0"}
 
 
 def test_parse_versions_ignores_unrelated_titles():
