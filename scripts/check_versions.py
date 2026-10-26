@@ -14,39 +14,37 @@ from typing import Any
 from packaging.version import Version
 
 TOOLS = ("oxlint", "oxfmt")
-RELEASES_URL = "https://api.github.com/repos/oxc-project/oxc/releases?per_page=30"
+RELEASES_URL = "https://api.github.com/repos/oxc-project/oxc/releases?per_page=100"
 PYPI_URL = "https://pypi.org/pypi/{project}/json"
 
 
 def _get_json(url: str) -> Any:
-	headers = {"User-Agent": "oxc-py"}
+	req = urllib.request.Request(url, headers={"User-Agent": "oxc-py"})
 	token = os.environ.get("GITHUB_TOKEN")
 	if token and url.startswith("https://api.github.com/"):
-		headers["Authorization"] = f"Bearer {token}"
-	req = urllib.request.Request(url, headers=headers)
+		# Unredirected so that the token is not forwarded to another host.
+		req.add_unredirected_header("Authorization", f"Bearer {token}")
 	with urllib.request.urlopen(req) as resp:
 		return json.load(resp)
 
 
-def parse_versions(title: str) -> dict[str, str]:
-	"""Extract per-tool versions from a release title.
+def tag_version(tool: str, tag: str) -> str | None:
+	"""Extract the version from a release tag like ``oxlint_v1.87.0``.
 
-	Titles look like ``oxlint v1.87.0`` or ``oxfmt v0.72.0``.
+	Tags with a pre-release suffix such as ``oxlint_v2.0.0-rc.1`` are rejected.
 	"""
-	out: dict[str, str] = {}
-	for tool in TOOLS:
-		m = re.search(rf"{tool} v(\d+\.\d+\.\d+)", title)
-		if m:
-			out[tool] = m.group(1)
-	return out
+	m = re.fullmatch(rf"{tool}_v(\d+\.\d+\.\d+)", tag)
+	return m.group(1) if m else None
 
 
-def latest_release(tool: str) -> dict:
-	releases = _get_json(RELEASES_URL)
+def latest_release(tool: str, releases: list[dict]) -> tuple[dict, str] | None:
 	for rel in releases:
-		if rel.get("tag_name", "").startswith(f"{tool}_v"):
-			return rel
-	raise RuntimeError(f"no {tool}_v* release found in latest 30 releases")
+		if rel.get("draft") or rel.get("prerelease"):
+			continue
+		version = tag_version(tool, rel.get("tag_name", ""))
+		if version:
+			return rel, version
+	return None
 
 
 def pypi_version(project: str) -> str | None:
@@ -66,11 +64,17 @@ def needs_publish(current: str | None, candidate: str) -> bool:
 
 
 def main() -> None:
-	releases = {tool: latest_release(tool) for tool in TOOLS}
-	versions = {
-		tool: parse_versions(release["name"])[tool]
-		for tool, release in releases.items()
-	}
+	all_releases = _get_json(RELEASES_URL)
+	releases: dict[str, dict] = {}
+	versions: dict[str, str] = {}
+	for tool in TOOLS:
+		found = latest_release(tool, all_releases)
+		if found is None:
+			# Skip rather than fail so that one tool cannot block the other.
+			sys.stderr.write(f"warning: no stable {tool}_v* release found\n")
+			continue
+		releases[tool], versions[tool] = found
+
 	tools_to_build: list[str] = []
 	for tool, version in versions.items():
 		if needs_publish(pypi_version(tool), version):
@@ -85,7 +89,7 @@ def main() -> None:
 	}
 	gh_output = os.environ.get("GITHUB_OUTPUT")
 	for key, value in outputs.items():
-		sys.stdout.write(f"{key}={value}")
+		sys.stdout.write(f"{key}={value}\n")
 		if gh_output:
 			with Path(gh_output).open("a") as fh:
 				fh.write(f"{key}={value}\n")

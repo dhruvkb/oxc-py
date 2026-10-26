@@ -1,18 +1,29 @@
-from scripts.check_versions import needs_publish, parse_versions
+from scripts.check_versions import latest_release, needs_publish, tag_version
 
 
-def test_parse_versions_extracts_both_tools():
-	title = "oxlint v1.72.0 & oxfmt v0.57.0"
-	assert parse_versions(title) == {"oxlint": "1.72.0", "oxfmt": "0.57.0"}
+def test_tag_version_extracts_version():
+	assert tag_version("oxlint", "oxlint_v1.87.0") == "1.87.0"
+	assert tag_version("oxfmt", "oxfmt_v0.72.0") == "0.72.0"
 
 
-def test_parse_versions_extracts_each_tool():
-	assert parse_versions("oxlint v1.87.0") == {"oxlint": "1.87.0"}
-	assert parse_versions("oxfmt v0.72.0") == {"oxfmt": "0.72.0"}
+def test_tag_version_rejects_other_tags():
+	assert tag_version("oxlint", "oxfmt_v0.72.0") is None
+	assert tag_version("oxlint", "crates_v0.138.0") is None
+	assert tag_version("oxlint", "oxlint_v2.0.0-rc.1") is None
 
 
-def test_parse_versions_ignores_unrelated_titles():
-	assert parse_versions("oxc crates_v0.138.0") == {}
+def test_latest_release_skips_drafts_and_prereleases():
+	releases = [
+		{"tag_name": "oxlint_v2.0.0", "draft": True},
+		{"tag_name": "oxlint_v1.99.0", "prerelease": True},
+		{"tag_name": "crates_v0.138.0"},
+		{"tag_name": "oxlint_v1.87.0"},
+	]
+	assert latest_release("oxlint", releases) == (releases[3], "1.87.0")
+
+
+def test_latest_release_returns_none_when_missing():
+	assert latest_release("oxfmt", [{"tag_name": "oxlint_v1.87.0"}]) is None
 
 
 def test_needs_publish_logic():
